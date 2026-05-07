@@ -1,12 +1,16 @@
 # Scientific Calculator — QA Automation Suite
 
+[![CI](https://github.com/gauravkumarsdet-bit/scientific-calculator-qa/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/gauravkumarsdet-bit/scientific-calculator-qa/actions/workflows/ci.yml)
+
 End-to-end automated test suite for the Scientific Calculator hosted at
 <https://rbihubcodechallenge.github.io/calculator/index.html>, authored as
 part of the **QA Lead Assessment**.
 
-> **Status:** scaffolding in progress — full suite, bug reports and CI
-> pipeline land in subsequent commits. Each commit represents a logical,
-> reviewable step (setup → page objects → tests → bug reports → CI).
+> **Status:** test suite, bug reports and CI pipeline are in place. The suite
+> catches **19 distinct defects** across 5 test categories (smoke / functional
+> / scientific / edge / UX). See [`bug-reports/README.md`](./bug-reports/README.md)
+> for the full defect inventory. A polished `README` walkthrough lands in the
+> next commit (Step 14).
 
 ## Tech stack
 

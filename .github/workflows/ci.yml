@@ -1,0 +1,125 @@
+name: CI
+
+# ---------------------------------------------------------------------------
+# Triggers
+# ---------------------------------------------------------------------------
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  # Manual trigger for ad-hoc runs from the Actions tab.
+  workflow_dispatch:
+
+# Cancel in-progress runs of this workflow on the same ref to save minutes
+# (e.g. when a developer pushes two commits in quick succession).
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# Least-privilege defaults — workflow only needs to read the source.
+permissions:
+  contents: read
+
+env:
+  PYTHON_VERSION: "3.12"
+  # Make pip & webdriver-manager caches deterministic across jobs.
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+  WDM_LOCAL: "1"
+  WDM_LOG_LEVEL: "0"
+
+jobs:
+  # =========================================================================
+  # 1. Static checks — fast feedback (~30 s)
+  # =========================================================================
+  lint:
+    name: Lint (black + flake8)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
+
+      - name: Install dev dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: Check formatting (black)
+        run: black --check src tests conftest.py
+
+      - name: Lint (flake8)
+        run: flake8 src tests conftest.py
+
+  # =========================================================================
+  # 2. End-to-end tests — Chromium headless, parallelised via pytest-xdist
+  # =========================================================================
+  test:
+    name: E2E tests (Chrome headless)
+    runs-on: ubuntu-latest
+    needs: lint
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install runtime dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # Ubuntu runners ship with Chrome pre-installed; webdriver-manager
+      # auto-resolves the matching chromedriver. We cache it across runs so
+      # the first parallel worker isn't blocked on a network download.
+      - name: Cache webdriver-manager
+        uses: actions/cache@v4
+        with:
+          path: ~/.wdm
+          key: wdm-${{ runner.os }}-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            wdm-${{ runner.os }}-
+
+      - name: Show Chrome / Chromedriver versions
+        run: |
+          google-chrome --version || true
+          which google-chrome || true
+
+      # The HTML / JUnit reporters are configured globally in pytest.ini —
+      # no extra flags needed here. -n auto enables pytest-xdist parallel
+      # execution; --dist=loadscope keeps tests in the same module on the
+      # same worker, which keeps failure attribution clean.
+      - name: Run pytest suite
+        env:
+          BASE_URL: "https://rbihubcodechallenge.github.io/calculator/index.html"
+          BROWSER: "chrome"
+          HEADLESS: "true"
+        run: pytest -n auto --dist=loadscope
+
+      # Upload reports & screenshots regardless of pass/fail so reviewers
+      # can inspect failures without re-running the suite.
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports-${{ github.run_number }}
+          path: reports/
+          retention-days: 14
+          if-no-files-found: warn
