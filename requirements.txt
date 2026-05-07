@@ -1,0 +1,18 @@
+# Runtime dependencies for the Scientific Calculator QA suite.
+# Pinned to specific versions for deterministic CI runs.
+
+# --- Core test runner ----------------------------------------------------
+pytest==8.3.3
+
+# --- Browser automation --------------------------------------------------
+selenium==4.25.0
+webdriver-manager==4.0.2
+
+# --- Reporting -----------------------------------------------------------
+pytest-html==4.1.1            # rich, self-contained HTML report
+pytest-metadata==3.1.1        # metadata for the HTML report (env, browser, etc.)
+
+# --- Execution control ---------------------------------------------------
+pytest-xdist==3.6.1            # parallel test execution
+pytest-rerunfailures==14.0     # retry flaky tests
+pytest-timeout==2.3.1          # hard cap on individual test runtime
