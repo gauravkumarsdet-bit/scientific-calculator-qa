@@ -128,7 +128,7 @@ def pytest_runtest_makereport(item, call):
     if drv is None:
         return
 
-    timestamp = _dt.datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+    timestamp = _dt.datetime.now(_dt.timezone.utc).strftime("%Y%m%d_%H%M%S")
     safe_name = item.name.replace("/", "_").replace(":", "_")
     screenshot_path = SCREENSHOTS_DIR / f"{safe_name}_{timestamp}.png"
 
