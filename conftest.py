@@ -38,6 +38,7 @@ if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
 # Imports below intentionally come *after* the sys.path tweak.
+from src.pages.calculator_page import CalculatorPage  # noqa: E402
 from src.utils.config import SCREENSHOTS_DIR, settings  # noqa: E402
 from src.utils.logger import get_logger  # noqa: E402
 
@@ -101,7 +102,16 @@ def driver() -> Generator[WebDriver, None, None]:
 
 
 # ---------------------------------------------------------------------------
-# 3. Screenshot-on-failure + HTML report attachment
+# 3. Page Object fixture
+# ---------------------------------------------------------------------------
+@pytest.fixture(scope="function")
+def calculator_page(driver: WebDriver) -> CalculatorPage:
+    """Return a freshly-loaded ``CalculatorPage`` ready for interaction."""
+    return CalculatorPage(driver).load()
+
+
+# ---------------------------------------------------------------------------
+# 4. Screenshot-on-failure + HTML report attachment
 # ---------------------------------------------------------------------------
 @pytest.hookimpl(hookwrapper=True, tryfirst=True)
 def pytest_runtest_makereport(item, call):
@@ -142,7 +152,7 @@ def pytest_runtest_makereport(item, call):
 
 
 # ---------------------------------------------------------------------------
-# 4. Enrich HTML report metadata
+# 5. Enrich HTML report metadata
 # ---------------------------------------------------------------------------
 def pytest_metadata(metadata: dict) -> None:
     """Hook from ``pytest-metadata`` — adds env info to the HTML report."""
