@@ -19,6 +19,7 @@ next commit alongside ``CalculatorPage``.
 from __future__ import annotations
 
 import datetime as _dt
+import re as _re
 import sys
 from pathlib import Path
 from typing import Generator
@@ -113,13 +114,34 @@ def calculator_page(driver: WebDriver) -> CalculatorPage:
 # ---------------------------------------------------------------------------
 # 4. Screenshot-on-failure + HTML report attachment
 # ---------------------------------------------------------------------------
+# Filename whitelist: actions/upload-artifact@v4 rejects paths containing any
+# of  <  >  :  "  /  \  |  ?  *  and additionally chokes on  (  )  [  ]  in
+# practice (Windows-compatible naming rules). pytest's parametrised IDs
+# routinely contain `[` `]` `(` `)` `*` `+` so we *must* sanitise before
+# touching the filesystem.
+_FILENAME_SAFE_RE = _re.compile(r"[^A-Za-z0-9._-]+")
+
+
+def _safe_filename(raw: str, *, max_len: int = 120) -> str:
+    """Convert any pytest item name into a portable, artifact-uploadable
+    filename. Strips runs of unsafe characters down to a single underscore."""
+    cleaned = _FILENAME_SAFE_RE.sub("_", raw).strip("._")
+    return cleaned[:max_len] or "test"
+
+
 @pytest.hookimpl(hookwrapper=True, tryfirst=True)
 def pytest_runtest_makereport(item, call):
-    """Capture a screenshot whenever a test fails or errors during 'call'."""
+    """Capture a screenshot when a test fails *unexpectedly* (i.e. not
+    because of a known-defect xfail)."""
     outcome = yield
     report = outcome.get_result()
 
     if report.when != "call" or report.passed:
+        return
+    # Don't waste disk / artifact-bandwidth on xfail outcomes — they are
+    # *expected* failures already documented in bug-reports/. Only capture
+    # screenshots for genuinely-unexpected failures and errors.
+    if getattr(report, "wasxfail", False):
         return
     if not settings.screenshot_on_failure:
         return
@@ -129,7 +151,7 @@ def pytest_runtest_makereport(item, call):
         return
 
     timestamp = _dt.datetime.now(_dt.timezone.utc).strftime("%Y%m%d_%H%M%S")
-    safe_name = item.name.replace("/", "_").replace(":", "_")
+    safe_name = _safe_filename(item.name)
     screenshot_path = SCREENSHOTS_DIR / f"{safe_name}_{timestamp}.png"
 
     try:

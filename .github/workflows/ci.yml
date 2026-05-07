@@ -117,6 +117,11 @@ jobs:
       # can inspect failures without re-running the suite.
       - name: Upload test reports
         if: always()
+        # continue-on-error so that even if some hypothetical filename slips
+        # past the conftest sanitiser and trips actions/upload-artifact's
+        # path validator, the build's overall result still reflects the
+        # *test* outcome — not the artifact step's bookkeeping.
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: test-reports-${{ github.run_number }}
