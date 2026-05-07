@@ -220,3 +220,21 @@ class CalculatorPage(BasePage):
         """True if the display ``<input>`` is rendered as disabled."""
         el = self.find(self.DISPLAY)
         return el.get_attribute("disabled") is not None
+
+    # ------------------------------------------------------------------
+    # Test-only input bypass
+    # ------------------------------------------------------------------
+    def set_display_value(self, value: str) -> "CalculatorPage":
+        """Set the display value directly via JavaScript.
+
+        **Use sparingly.** This bypasses the digit / decimal / parenthesis
+        button paths and exists only so a function-under-test (sin, cos,
+        tan, sqrt, log) can be exercised in isolation when the *input*
+        path itself contains known defects (e.g. BUG-002 — the '3' button
+        appends '0', so any test that needs '3' on the display would
+        otherwise be tracking the input bug, not the function bug).
+        """
+        self.driver.execute_script(
+            "document.getElementById('display').value = arguments[0];", str(value)
+        )
+        return self
