@@ -61,14 +61,28 @@ def _expected_for(case: FuncCase) -> str:
 # ===========================================================================
 # 1. Function correctness (input layer bypassed for clean isolation)
 # ===========================================================================
+_TRIG_XFAIL = {
+    # sin always returns 1 — BUG-007. sin_pi_over_2_approx happens to land on
+    # 1 by mathematical coincidence so it is NOT xfailed.
+    "sin_zero": "BUG-007: sin handler is `display.value = 434563^434562` (always 1).",
+    "sin_pi": "BUG-007: sin handler ignores its input.",
+}
+
+
+def _trig_params():
+    for c in (c for c in SCIENTIFIC if c.function in ("sin", "cos", "tan")):
+        marks = (
+            (pytest.mark.xfail(strict=True, reason=_TRIG_XFAIL[c.id]),)
+            if c.id in _TRIG_XFAIL
+            else ()
+        )
+        yield pytest.param(c, marks=marks, id=c.id)
+
+
 class TestTrigFunctions:
     """sin / cos / tan in radians — Math.{sin,cos,tan} semantics."""
 
-    @pytest.mark.parametrize(
-        "case",
-        [c for c in SCIENTIFIC if c.function in ("sin", "cos", "tan")],
-        ids=lambda c: c.id,
-    )
+    @pytest.mark.parametrize("case", list(_trig_params()))
     def test_trig_function_matches_oracle_with_clean_input(
         self, calculator_page: CalculatorPage, case: FuncCase
     ) -> None:
@@ -140,12 +154,42 @@ class TestSinIsConstant:
     @pytest.mark.parametrize(
         ("value", "expected_result"),
         [
-            (0, "0"),  # Math.sin(0) = 0
-            (1, "0.8414709848078965"),  # Math.sin(1)
-            (math.pi, "1.2246467991473532e-16"),  # Math.sin(π) ≈ 0 (float noise)
-            (math.pi / 2, "1"),  # Math.sin(π/2) = 1 — only this one is "right" by coincidence
+            pytest.param(
+                0,
+                "0",
+                marks=pytest.mark.xfail(
+                    strict=True,
+                    reason="BUG-007: sin always returns 1.",
+                ),
+                id="v=0",
+            ),
+            pytest.param(
+                1,
+                "0.8414709848078965",
+                marks=pytest.mark.xfail(
+                    strict=True,
+                    reason="BUG-007: sin always returns 1.",
+                ),
+                id="v=1",
+            ),
+            pytest.param(
+                math.pi,
+                "1.2246467991473532e-16",
+                marks=pytest.mark.xfail(
+                    strict=True,
+                    reason="BUG-007: sin always returns 1.",
+                ),
+                id="v=pi",
+            ),
+            pytest.param(
+                math.pi / 2,
+                "1",
+                # NO xfail: sin(π/2) coincidentally equals 1, so this passes
+                # despite BUG-007. Once BUG-007 is fixed it will continue to
+                # pass — that asymmetry is itself documentation of the defect.
+                id="v=pi/2",
+            ),
         ],
-        ids=lambda v: f"v={v}",
     )
     def test_sin_uses_its_input(
         self, calculator_page: CalculatorPage, value: float, expected_result: str
@@ -174,12 +218,22 @@ class TestDomainErrorsAreReported:
     coerced to strings and shown verbatim. That is the defect.
     """
 
+    @pytest.mark.xfail(
+        strict=True,
+        reason="BUG-008: Math.sqrt(-x) returns NaN; func() does not "
+        "normalise non-finite results to 'Error'.",
+    )
     def test_sqrt_of_negative_must_show_error(self, calculator_page: CalculatorPage) -> None:
         calculator_page.set_display_value("-4")
         calculator_page.click_function("sqrt")
         result = calculator_page.read_display()
         assert result == "Error", f"√(-4) must yield 'Error', got {result!r} — raw JS NaN leaked."
 
+    @pytest.mark.xfail(
+        strict=True,
+        reason="BUG-008: Math.log10(0) returns -Infinity; func() does not "
+        "normalise non-finite results to 'Error'.",
+    )
     def test_log_of_zero_must_show_error(self, calculator_page: CalculatorPage) -> None:
         calculator_page.set_display_value("0")
         calculator_page.click_function("log")
@@ -188,6 +242,11 @@ class TestDomainErrorsAreReported:
             result == "Error"
         ), f"log(0) must yield 'Error', got {result!r} — raw JS -Infinity leaked."
 
+    @pytest.mark.xfail(
+        strict=True,
+        reason="BUG-008: Math.log10(-x) returns NaN; func() does not "
+        "normalise non-finite results to 'Error'.",
+    )
     def test_log_of_negative_must_show_error(self, calculator_page: CalculatorPage) -> None:
         calculator_page.set_display_value("-1")
         calculator_page.click_function("log")

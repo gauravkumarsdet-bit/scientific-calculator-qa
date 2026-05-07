@@ -36,7 +36,24 @@ pytestmark = [pytest.mark.functional, pytest.mark.bug, pytest.mark.regression]
 # ---------------------------------------------------------------------------
 # Digit buttons — visible label MUST equal what is appended to the display
 # ---------------------------------------------------------------------------
-@pytest.mark.parametrize("digit", list(range(10)), ids=lambda d: f"digit={d}")
+@pytest.mark.parametrize(
+    "digit",
+    [
+        pytest.param(
+            d,
+            marks=(
+                pytest.mark.xfail(
+                    strict=True,
+                    reason="BUG-002: digit '3' button is wired to append('0').",
+                )
+                if d == 3
+                else ()
+            ),
+        )
+        for d in range(10)
+    ],
+    ids=lambda d: f"digit={d}",
+)
 def test_digit_button_inserts_its_own_label(calculator_page: CalculatorPage, digit: int) -> None:
     """Pressing the digit ``N`` button must append exactly the character
     ``N`` to the display — never anything else.
@@ -58,6 +75,11 @@ def test_digit_button_inserts_its_own_label(calculator_page: CalculatorPage, dig
 # ---------------------------------------------------------------------------
 # The minus ('−') button MUST perform subtraction, not division
 # ---------------------------------------------------------------------------
+@pytest.mark.xfail(
+    strict=True,
+    reason="BUG-001: minus button's onclick handler is append('/'), so "
+    "it performs division instead of subtraction.",
+)
 def test_minus_button_subtracts(calculator_page: CalculatorPage) -> None:
     """Pressing ``9 − 4 =`` must display ``5``.
 
@@ -81,6 +103,11 @@ def test_minus_button_subtracts(calculator_page: CalculatorPage) -> None:
 # ---------------------------------------------------------------------------
 # Division — operand order must be left/right, not right/left
 # ---------------------------------------------------------------------------
+@pytest.mark.xfail(
+    strict=True,
+    reason="BUG-003: division operands are swapped in the parser "
+    "(_0x692a / _0x831edg instead of _0x831edg / _0x692a).",
+)
 @pytest.mark.parametrize(
     ("expression", "expected"),
     [

@@ -73,6 +73,11 @@ class TestParenthesesAlone:
 # 2. Parentheses bug — anything after a closing ')' is silently dropped
 # ===========================================================================
 @pytest.mark.bug
+@pytest.mark.xfail(
+    strict=True,
+    reason="BUG-009: parser silently drops every token after a closing "
+    "')' that is not the right-most token.",
+)
 class TestParserTruncatesAfterClosingParen:
     """The parser drops every token after a closing ``)`` that is not the
     rightmost token in the expression.
@@ -122,6 +127,11 @@ class TestParserTruncatesAfterClosingParen:
 # 3. Malformed parentheses
 # ===========================================================================
 @pytest.mark.bug
+@pytest.mark.xfail(
+    strict=True,
+    reason="BUG-010: malformed paren inputs leak NaN or are silently "
+    "truncated; the existing 'Error' pathway should subsume them.",
+)
 class TestMalformedParenthesesShouldYieldError:
     """Mismatched / empty parens should land on the existing 'Error'
     pathway, not leak 'NaN' or silently truncate.
@@ -176,6 +186,11 @@ class TestOperatorPrecedenceMultiplicativeOnly:
 # 5. Division by zero — what the calculator should display
 # ===========================================================================
 @pytest.mark.bug
+@pytest.mark.xfail(
+    strict=True,
+    reason="BUG-011: a/0 leaks Infinity / NaN (or 0 via cascade with "
+    "BUG-003) instead of the existing 'Error' pathway.",
+)
 class TestDivisionByZero:
     """``a / 0`` must surface ``Error`` rather than leaking JS Infinity /
     -Infinity / NaN.

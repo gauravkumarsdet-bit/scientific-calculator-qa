@@ -42,6 +42,10 @@ class TestDisplayAccessibility:
     """The display is the calculator's primary output. It must be
     discoverable & announced by assistive tech."""
 
+    @pytest.mark.xfail(
+        strict=True,
+        reason="BUG-012: display has the 'disabled' attribute; should be 'readonly'.",
+    )
     def test_display_should_be_readonly_not_disabled(self, calculator_page: CalculatorPage) -> None:
         """``disabled`` removes the element from the accessibility tree
         and the tab order entirely; ``readonly`` is the correct attribute
@@ -57,6 +61,10 @@ class TestDisplayAccessibility:
             "to screen readers and removes it from tab order. Use 'readonly'."
         )
 
+    @pytest.mark.xfail(
+        strict=True,
+        reason="BUG-013: display <input> has no aria-label.",
+    )
     def test_display_should_have_aria_label(self, calculator_page: CalculatorPage) -> None:
         """Without an accessible name the screen-reader announces only
         'edit' or 'text input' — completely unhelpful."""
@@ -68,6 +76,11 @@ class TestDisplayAccessibility:
             'aria-label="Calculator display".'
         )
 
+    @pytest.mark.xfail(
+        strict=True,
+        reason="BUG-014: display is not declared aria-live; result updates "
+        "are inaudible to screen-reader users.",
+    )
     def test_display_should_be_an_aria_live_region(self, calculator_page: CalculatorPage) -> None:
         """When ``=`` is pressed, the display value updates without any
         focus change. Without ``aria-live``, the change is invisible to
@@ -87,6 +100,10 @@ class TestDisplayAccessibility:
 class TestPageAccessibility:
     """Document-level a11y hygiene."""
 
+    @pytest.mark.xfail(
+        strict=True,
+        reason="BUG-015: page has neither <main> landmark nor any heading element.",
+    )
     def test_page_has_main_landmark_or_heading(self, calculator_page: CalculatorPage) -> None:
         """Screen-reader users navigate by landmarks (``<main>``) and
         headings. The page exposes neither — only the ``<title>``.
@@ -99,6 +116,11 @@ class TestPageAccessibility:
             "Add <h1>Scientific Calculator</h1> at minimum."
         )
 
+    @pytest.mark.xfail(
+        strict=True,
+        reason="BUG-016: <meta name='viewport'> is absent; mobile rendering "
+        "uses default 980px width and is unusable.",
+    )
     def test_viewport_meta_is_present_for_mobile(self, calculator_page: CalculatorPage) -> None:
         """No viewport meta means the page is unusable on phones (zoomed
         out by default, fixed-pixel layout)."""
@@ -120,6 +142,10 @@ class TestButtonAttributes:
     """Buttons must declare ``type="button"`` to avoid implicit submit
     behaviour if the calculator is ever embedded in a ``<form>``."""
 
+    @pytest.mark.xfail(
+        strict=True,
+        reason="BUG-017: 24 buttons rely on the HTML default <button type='submit'>.",
+    )
     def test_all_buttons_have_explicit_type_button(self, calculator_page: CalculatorPage) -> None:
         bad = calculator_page.driver.execute_script(
             """
@@ -143,6 +169,11 @@ class TestKeyboardInput:
     """A scientific calculator that cannot be typed into is hostile to
     productivity users (and a WCAG keyboard-operability violation)."""
 
+    @pytest.mark.xfail(
+        strict=True,
+        reason="BUG-018: no keydown handler; calculator is mouse-only "
+        "(WCAG 2.1.1 Keyboard violation).",
+    )
     def test_typing_a_digit_on_keyboard_updates_the_display(
         self, calculator_page: CalculatorPage
     ) -> None:
@@ -174,6 +205,11 @@ class TestPostEqualsBehaviour:
     append to it. Every desktop / mobile / OS calculator behaves this
     way; users will be surprised otherwise."""
 
+    @pytest.mark.xfail(
+        strict=True,
+        reason="BUG-019: pressing a digit after '=' appends to the result "
+        "instead of starting a fresh calculation.",
+    )
     def test_digit_after_equals_starts_new_calculation(
         self, calculator_page: CalculatorPage
     ) -> None:

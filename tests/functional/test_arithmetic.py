@@ -27,13 +27,35 @@ pytestmark = [pytest.mark.functional, pytest.mark.regression]
 
 
 # ---------------------------------------------------------------------------
+# Per-case xfail map: links each known-failing arithmetic case to its bug ID.
+# Update this map (and the bug reports) when behaviour changes.
+# ---------------------------------------------------------------------------
+_ARITHMETIC_XFAIL_REASONS: dict[str, str] = {
+    # Cascade of BUG-002: any expression containing '3' gets a '0' instead.
+    "add_small": "BUG-002: '3' button appends '0', so '2+3' is entered as '2+0'.",
+    # Cascades of BUG-001 (minus -> /) and BUG-003 (operand swap on /).
+    "sub_simple": "BUG-001 + BUG-003: '9-4' enters as '9/4', evaluated as '4/9'.",
+    "sub_to_zero": "BUG-001 + BUG-003: '7-7' enters as '7/7', swap leaves '7/7'=1.",
+    "sub_negative_result": "BUG-001 + BUG-003: '2-9' enters as '2/9', swap -> '9/2'.",
+    # Pure division-related defects.
+    "div_clean": "BUG-003: division operands are swapped in the parser.",
+    "div_recurring": "BUG-002 + BUG-003: '3' button appends '0' then operand-swap.",
+    "div_one": "BUG-003: division operands are swapped in the parser.",
+}
+
+
+def _arithmetic_params():
+    for c in BASIC_ARITHMETIC:
+        marks = ()
+        if c.id in _ARITHMETIC_XFAIL_REASONS:
+            marks = (pytest.mark.xfail(strict=True, reason=_ARITHMETIC_XFAIL_REASONS[c.id]),)
+        yield pytest.param(c, marks=marks, id=c.id)
+
+
+# ---------------------------------------------------------------------------
 # Parametrised matrix — every basic arithmetic case
 # ---------------------------------------------------------------------------
-@pytest.mark.parametrize(
-    "case",
-    BASIC_ARITHMETIC,
-    ids=[c.id for c in BASIC_ARITHMETIC],
-)
+@pytest.mark.parametrize("case", list(_arithmetic_params()))
 def test_basic_arithmetic_matches_oracle(
     calculator_page: CalculatorPage,
     case: Case,

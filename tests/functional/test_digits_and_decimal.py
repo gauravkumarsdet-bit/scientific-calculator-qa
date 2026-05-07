@@ -96,6 +96,11 @@ class TestDecimalPoint:
     # Bug-tracking tests — multi-decimal-point inputs
     # ------------------------------------------------------------------
     @pytest.mark.bug
+    @pytest.mark.xfail(
+        strict=True,
+        reason="BUG-004: lexer accepts [\\d.]+ as one token; '1.2.4' is "
+        "silently truncated to '1.2' by parseFloat.",
+    )
     def test_multiple_decimal_points_must_be_rejected(
         self, calculator_page: CalculatorPage
     ) -> None:
@@ -115,6 +120,11 @@ class TestDecimalPoint:
         )
 
     @pytest.mark.bug
+    @pytest.mark.xfail(
+        strict=True,
+        reason="BUG-004: same root cause as the 1.2.4 case; '1..5' "
+        "tokenises as a single number, parseFloat returns 1.",
+    )
     def test_consecutive_decimal_points_must_be_rejected(
         self, calculator_page: CalculatorPage
     ) -> None:
@@ -161,6 +171,11 @@ class TestClearAndErrors:
     # Bug-tracking tests — inconsistent error pathway
     # ------------------------------------------------------------------
     @pytest.mark.bug
+    @pytest.mark.xfail(
+        strict=True,
+        reason="BUG-005: evaluateExpression returns undefined for empty "
+        "input; calculate() coerces it to the string 'undefined'.",
+    )
     def test_pressing_equals_with_empty_display_must_not_show_undefined(
         self, calculator_page: CalculatorPage
     ) -> None:
@@ -182,6 +197,11 @@ class TestClearAndErrors:
         )
 
     @pytest.mark.bug
+    @pytest.mark.xfail(
+        strict=True,
+        reason="BUG-006: leading binary operator yields NaN instead of "
+        "reaching the existing 'Error' pathway.",
+    )
     def test_leading_operator_must_yield_error_consistent_with_trailing(
         self, calculator_page: CalculatorPage
     ) -> None:
